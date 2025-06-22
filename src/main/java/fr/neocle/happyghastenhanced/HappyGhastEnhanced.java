@@ -1,7 +1,12 @@
 package fr.neocle.happyghastenhanced;
 
 import fr.neocle.happyghastenhanced.config.ConfigManager;
-import fr.neocle.happyghastenhanced.listener.GhastSpeedListener;
+import fr.neocle.happyghastenhanced.listener.GhastBuildingListener;
+import fr.neocle.happyghastenhanced.listener.GhastMountListener;
+import fr.neocle.happyghastenhanced.listener.ItemHeldListener;
+import fr.neocle.happyghastenhanced.listener.PlayerDisconnectListener;
+import fr.neocle.happyghastenhanced.manager.CameraManager;
+import fr.neocle.happyghastenhanced.manager.SpeedManager;
 import fr.neocle.happyghastenhanced.util.Logger;
 import net.kyori.adventure.text.Component;
 import org.bstats.bukkit.Metrics;
@@ -14,22 +19,40 @@ public class HappyGhastEnhanced extends JavaPlugin {
 
     private ConfigManager configManager;
     private Logger logger;
-    private GhastSpeedListener ghastSpeedListener;
+    private SpeedManager speedManager;
+    private CameraManager cameraManager;
+
+    private GhastMountListener mountListener;
+    private PlayerDisconnectListener disconnectListener;
+    private ItemHeldListener itemHeldListener;
+    private GhastBuildingListener buildingListener;
 
     @Override
     public void onEnable() {
         this.logger = new Logger(this);
         this.configManager = new ConfigManager(this);
-        this.ghastSpeedListener = new GhastSpeedListener(this);
+        this.speedManager = new SpeedManager(this);
+        this.cameraManager = new CameraManager(this);
+
+        this.mountListener = new GhastMountListener(this, speedManager, cameraManager);
+        this.disconnectListener = new PlayerDisconnectListener(this, speedManager);
+        this.itemHeldListener = new ItemHeldListener(this, speedManager);
+        this.buildingListener = new GhastBuildingListener(this);
 
         configManager.loadConfig();
-        getServer().getPluginManager().registerEvents(ghastSpeedListener, this);
-        ghastSpeedListener.startSpeedCheckTask();
+
+        getServer().getPluginManager().registerEvents(mountListener, this);
+        getServer().getPluginManager().registerEvents(disconnectListener, this);
+        getServer().getPluginManager().registerEvents(itemHeldListener, this);
+        getServer().getPluginManager().registerEvents(buildingListener, this);
+
+        speedManager.startSpeedCheckTask();
 
         logger.info(configManager.getPlainMessage("plugin-enabled"));
         logger.config("Default speed: " + configManager.getDefaultSpeed());
         logger.config("Boosted speed: " + configManager.getBoostedSpeed());
         logger.config("Trigger item: " + configManager.getTriggerItem());
+        logger.config("Camera distance: " + configManager.getCameraDistance());
 
         int pluginId = 26246;
         Metrics metrics = new Metrics(this, pluginId);
@@ -37,8 +60,11 @@ public class HappyGhastEnhanced extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        if (ghastSpeedListener != null) {
-            ghastSpeedListener.cleanup();
+        if (speedManager != null) {
+            speedManager.shutdown();
+        }
+        if (cameraManager != null) {
+            cameraManager.shutdown();
         }
         logger.info(configManager.getPlainMessage("plugin-disabled"));
     }
@@ -75,5 +101,9 @@ public class HappyGhastEnhanced extends JavaPlugin {
 
     public Logger getCustomLogger() {
         return logger;
+    }
+
+    public CameraManager getCameraManager() {
+        return cameraManager;
     }
 }

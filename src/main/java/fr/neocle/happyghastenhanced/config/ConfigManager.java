@@ -14,8 +14,10 @@ public class ConfigManager {
 
     private double defaultSpeed;
     private double boostedSpeed;
+    private double cameraDistance;
     private Material triggerItem;
     private boolean debugEnabled;
+    private boolean allowBuildingOnGhast;
 
     public ConfigManager(HappyGhastEnhanced plugin) {
         this.plugin = plugin;
@@ -29,7 +31,9 @@ public class ConfigManager {
 
         defaultSpeed = config.getDouble("speeds.default", 0.05);
         boostedSpeed = config.getDouble("speeds.boosted", 0.15);
+        cameraDistance = config.getDouble("camera-distance", 8.0);
         debugEnabled = config.getBoolean("debug", false);
+        allowBuildingOnGhast = config.getBoolean("allow-building-on-ghast", true);
 
         String itemName = config.getString("trigger-item", "SNOWBALL");
         try {
@@ -96,11 +100,19 @@ public class ConfigManager {
         return boostedSpeed;
     }
 
+    public double getCameraDistance() {
+        return cameraDistance;
+    }
+
     public Material getTriggerItem() {
         return triggerItem;
     }
 
     public boolean isDebugEnabled() {
         return debugEnabled;
+    }
+
+    public boolean isAllowBuildingOnGhast() {
+        return allowBuildingOnGhast;
     }
 }
