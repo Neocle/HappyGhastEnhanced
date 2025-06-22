@@ -32,131 +32,88 @@ public class GhastBuildingListener implements Listener {
     @EventHandler
     public void onPlayerInteractAtEntity(PlayerInteractAtEntityEvent event) {
         Player player = event.getPlayer();
+
         if (!plugin.getConfigManager().isAllowBuildingOnGhast()) return;
         if (!player.isSneaking()) return;
 
         Entity entity = event.getRightClicked();
-        if (!(entity instanceof HappyGhast)) return;
+        if (!(entity instanceof HappyGhast ghast)) return;
 
-        GameMode gameMode = player.getGameMode();
-        if (gameMode != GameMode.SURVIVAL && gameMode != GameMode.CREATIVE) return;
+        GameMode mode = player.getGameMode();
+        if (mode != GameMode.SURVIVAL && mode != GameMode.CREATIVE) return;
 
-        ItemStack item = player.getInventory().getItemInMainHand();
-        Material material = item.getType();
-        EquipmentSlot slot = EquipmentSlot.HAND;
+        ItemStack item = getPlaceableItem(player);
+        if (item == null) return;
 
-        if (material.isAir() || !material.isBlock() || !material.isSolid()) {
-            item = player.getInventory().getItemInOffHand();
-            material = item.getType();
-            if (material.isAir() || !material.isBlock() || !material.isSolid()) return;
-            slot = EquipmentSlot.OFF_HAND;
-        }
+        EquipmentSlot slot = player.getInventory().getItemInMainHand().equals(item) ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
 
-        Location clicked = entity.getLocation().add(event.getClickedPosition());
-
+        Location base = ghast.getLocation().add(event.getClickedPosition());
         BlockFace face = getDominantFace(event.getClickedPosition());
-        Location target = clicked.getBlock().getRelative(face).getLocation();
+        Block target = base.getBlock().getRelative(face);
 
-        if (entity.getBoundingBox().overlaps(target.getBlock().getBoundingBox())) return;
-        if (!target.getBlock().getType().isAir()) return;
+        if (ghast.getBoundingBox().overlaps(target.getBoundingBox())) return;
+        if (!target.getType().isAir()) return;
 
-        placeBlockWithEvent(player, target.getBlock(), face, item, slot);
+        placeBlock(player, target, face, item, slot);
         event.setCancelled(true);
 
         logger.debug("Player " + player.getName() + " placed block on HappyGhast at " +
-                target.getBlockX() + ", " + target.getBlockY() + ", " + target.getBlockZ());
+                target.getX() + ", " + target.getY() + ", " + target.getZ());
     }
 
-    private void placeBlockWithEvent(Player player, Block block, BlockFace face, ItemStack placedItem, EquipmentSlot slot) {
-        BlockState replacedState = block.getState();
-        BlockPlaceEvent placeEvent = new BlockPlaceEvent(
-                block,
-                replacedState,
-                block.getRelative(face),
-                placedItem,
-                player,
-                true,
-                slot
-        );
+    private ItemStack getPlaceableItem(Player player) {
+        ItemStack main = player.getInventory().getItemInMainHand();
+        if (isValidBlockItem(main)) return main;
+
+        ItemStack off = player.getInventory().getItemInOffHand();
+        if (isValidBlockItem(off)) return off;
+
+        return null;
+    }
+
+    private boolean isValidBlockItem(ItemStack item) {
+        Material material = item.getType();
+        return !material.isAir() && material.isBlock() && material.isSolid();
+    }
+
+    private void placeBlock(Player player, Block block, BlockFace face, ItemStack item, EquipmentSlot slot) {
+        BlockState oldState = block.getState();
+        Block relative = block.getRelative(face);
+        BlockPlaceEvent placeEvent = new BlockPlaceEvent(block, oldState, relative, item, player, true, slot);
 
         Bukkit.getPluginManager().callEvent(placeEvent);
         if (placeEvent.isCancelled()) return;
 
         if (player.getGameMode() != GameMode.CREATIVE) {
-            placedItem.setAmount(placedItem.getAmount() - 1);
+            item.setAmount(item.getAmount() - 1);
         }
 
-        BlockData data = Bukkit.createBlockData(placedItem.getType());
+        BlockData data = Bukkit.createBlockData(item.getType());
         if (data instanceof Directional directional) {
-            face = face.getOppositeFace();
-            if (face != BlockFace.UP && face != BlockFace.DOWN) {
-                directional.setFacing(face);
+            BlockFace opposite = face.getOppositeFace();
+            if (opposite != BlockFace.UP && opposite != BlockFace.DOWN) {
+                directional.setFacing(opposite);
             }
         }
+
         block.setBlockData(data, true);
     }
 
-    private Location adjustPlaceLocation(Location placeLocation, Entity entity) {
-        Location entityLocation = entity.getLocation();
-        double entityHeight = entity.getHeight();
-        double entityWidth = entity.getWidth();
-
-        double relativeX = placeLocation.getX() - entityLocation.getX();
-        double relativeY = placeLocation.getY() - entityLocation.getY();
-        double relativeZ = placeLocation.getZ() - entityLocation.getZ();
-
-        double halfWidth = entityWidth / 2.0;
-        double halfHeight = entityHeight / 2.0;
-
-        Location adjustedLocation = placeLocation.clone();
-
-        if (Math.abs(relativeX) > Math.abs(relativeZ)) {
-            if (relativeX > 0) {
-                adjustedLocation.setX(entityLocation.getX() + halfWidth + 1);
-            } else {
-                adjustedLocation.setX(entityLocation.getX() - halfWidth - 1);
-            }
-        } else {
-            if (relativeZ > 0) {
-                adjustedLocation.setZ(entityLocation.getZ() + halfWidth + 1);
-            } else {
-                adjustedLocation.setZ(entityLocation.getZ() - halfWidth - 1);
-            }
-        }
-
-        if (relativeY > halfHeight) {
-            adjustedLocation.setY(entityLocation.getY() + entityHeight + 1);
-        } else if (relativeY < -halfHeight) {
-            adjustedLocation.setY(entityLocation.getY() - 1);
-        } else {
-            if (Math.abs(relativeY) < 0.5) {
-                adjustedLocation.setY(entityLocation.getY() + halfHeight);
-            }
-        }
-
-        adjustedLocation.setX(Math.floor(adjustedLocation.getX()));
-        adjustedLocation.setY(Math.floor(adjustedLocation.getY()));
-        adjustedLocation.setZ(Math.floor(adjustedLocation.getZ()));
-
-        return adjustedLocation;
-    }
-
     private BlockFace getDominantFace(Vector direction) {
-        BlockFace bestFace = BlockFace.NORTH;
-        double bestDot = -Double.MAX_VALUE;
-
-        Vector normalized = direction.clone().normalize();
+        Vector norm = direction.clone().normalize();
+        BlockFace dominant = BlockFace.NORTH;
+        double best = -Double.MAX_VALUE;
 
         for (BlockFace face : BlockFace.values()) {
             if (!face.isCartesian()) continue;
 
-            double dot = normalized.dot(face.getDirection());
-            if (dot > bestDot) {
-                bestDot = dot;
-                bestFace = face;
+            double dot = norm.dot(face.getDirection());
+            if (dot > best) {
+                best = dot;
+                dominant = face;
             }
         }
 
-        return bestFace;
+        return dominant;
     }
 }
