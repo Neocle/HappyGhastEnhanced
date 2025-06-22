@@ -1,0 +1,33 @@
+# HappyGhastEnhanced Configuration
+# Plugin that enhances Happy Ghast riding experience
+
+# Speed settings
+speeds:
+  # Default flight speed when not holding trigger item (0.0 to 1.0)
+  default: 0.05
+  # Boosted flight speed when holding trigger item (0.0 to 1.0)
+  boosted: 0.15
+
+# Item that triggers speed boost when held in main hand or off-hand
+# Valid values: Any Minecraft material name (e.g., SNOWBALL, FEATHER, SUGAR, etc.)
+trigger-item: "SNOWBALL"
+
+# Enable debug logging for troubleshooting
+debug: false
+
+# Messages configuration (using MiniMessage format)
+messages:
+  # Plugin status messages
+  plugin-enabled: "<green>HappyGhastEnhanced plugin enabled!</green>"
+  plugin-disabled: "<red>HappyGhastEnhanced plugin disabled!</red>"
+
+  # Command messages
+  no-permission: "<red>You don't have permission to reload the plugin.</red>"
+  config-reloaded: "<green>HappyGhastEnhanced configuration reloaded!</green>"
+  plugin-info: "<gold>HappyGhastEnhanced v{version}</gold>"
+  command-usage: "<gray>Use /hge reload to reload configuration</gray>"
+
+  # Config validation messages
+  invalid-trigger-item: "<yellow>Invalid trigger item: {item}. Using SNOWBALL as default.</yellow>"
+  speed-out-of-range: "<yellow>{type} speed out of range (0-1): {value}. Using {default}</yellow>"
+  boosted-speed-warning: "<yellow>Boosted speed should be higher than default speed. Adjusting boosted speed.</yellow>"

@@ -1,0 +1,23 @@
+name: HappyGhastEnhanced
+version: ${project.version}
+author: Neocle
+
+main: fr.neocle.happyghastenhanced.HappyGhastEnhanced
+api-version: 1.21
+description: Allows faster flight when riding a ghast while holding a snowball
+website: https://neocle.fr/
+
+commands:
+  hge:
+    description: Main command for HappyGhastEnhanced
+    usage: /hge [reload]
+    permission: happyghastenhanced.use
+    aliases: [happyghastenhanced]
+
+permissions:
+  happyghastenhanced.use:
+    description: Allows basic plugin usage
+    default: true
+  happyghastenhanced.reload:
+    description: Allows configuration reload
+    default: op
